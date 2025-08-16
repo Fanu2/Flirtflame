@@ -1,6 +1,6 @@
-import { useState, useRef } from 'react';
+import { useState, useRef } from "react";
 
-type Mood = 'romantic' | 'flirty' | 'mysterious' | 'cheeky' | 'playful';
+type Mood = "romantic" | "flirty" | "mysterious" | "cheeky" | "playful";
 type Caption = {
   text: string;
   emoji: string;
@@ -8,8 +8,8 @@ type Caption = {
 
 const moodData = {
   romantic: {
-    palette: 'bg-rose-200',
-    filterClasses: 'filter sepia opacity-90',
+    palette: "bg-rose-200",
+    filterClasses: "filter sepia opacity-90",
     captions: [
       { text: "You're captivating, truly.", emoji: "💖" },
       { text: "My heart skips a beat for you.", emoji: "💞" },
@@ -18,8 +18,8 @@ const moodData = {
     ],
   },
   flirty: {
-    palette: 'bg-pink-500',
-    filterClasses: 'filter brightness-125 saturate-150',
+    palette: "bg-pink-500",
+    filterClasses: "filter brightness-125 saturate-150",
     captions: [
       { text: "Is it hot in here, or is it just you?", emoji: "🔥" },
       { text: "I'm not usually this bold, but you...", emoji: "😉" },
@@ -28,8 +28,8 @@ const moodData = {
     ],
   },
   mysterious: {
-    palette: 'bg-purple-900',
-    filterClasses: 'filter grayscale opacity-75',
+    palette: "bg-purple-900",
+    filterClasses: "filter grayscale opacity-75",
     captions: [
       { text: "Intriguing, as always.", emoji: "🧐" },
       { text: "Some secrets are best left unsaid... for now.", emoji: "🤫" },
@@ -38,8 +38,8 @@ const moodData = {
     ],
   },
   cheeky: {
-    palette: 'bg-orange-300',
-    filterClasses: 'filter contrast-125 saturate-125',
+    palette: "bg-orange-300",
+    filterClasses: "filter contrast-125 saturate-125",
     captions: [
       { text: "Did it hurt when you fell from heaven? Just kidding, you're obviously a mischievous imp.", emoji: "😈" },
       { text: "I've got my eyes on you, you little troublemaker.", emoji: "😜" },
@@ -48,8 +48,8 @@ const moodData = {
     ],
   },
   playful: {
-    palette: 'bg-cyan-200',
-    filterClasses: 'filter hue-rotate-15 brightness-110',
+    palette: "bg-cyan-200",
+    filterClasses: "filter hue-rotate-15 brightness-110",
     captions: [
       { text: "Let's make some fun memories!", emoji: "🎉" },
       { text: "You're more fun than a barrel of monkeys!", emoji: "🐒" },
@@ -66,7 +66,7 @@ const getRandomCaption = (mood: Mood): Caption => {
 
 const FlirtFrame: React.FC = () => {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [selectedMood, setSelectedMood] = useState<Mood>('romantic');
+  const [selectedMood, setSelectedMood] = useState<Mood>("romantic");
   const [currentCaption, setCurrentCaption] = useState<Caption | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -89,36 +89,53 @@ const FlirtFrame: React.FC = () => {
     }
   };
 
-  const handleExport = () => {
-    if (selectedImage && currentCaption) {
-      alert(`Exporting your FlirtFrame!\nMood: ${selectedMood}\nCaption: "${currentCaption.text}" ${currentCaption.emoji}\n(Image export functionality would be implemented here, e.g., using canvas to render and download)`);
-    } else {
+  // --- EXPORT TO CANVAS and DOWNLOAD ---
+  const handleExport = async () => {
+    if (!selectedImage || !currentCaption) {
       alert("Please upload an image and choose a mood first!");
+      return;
     }
+
+    // load image
+    const img = new Image();
+    img.src = selectedImage;
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext("2d");
+
+      if (ctx) {
+        // draw the base image
+        ctx.drawImage(img, 0, 0);
+
+        // overlay color
+        ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--tw-bg-opacity') || "rgba(255,0,0,0.2)";
+        // we can approximate overlay blending
+        ctx.fillStyle = "rgba(255, 192, 203, 0.25)";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // draw caption
+        ctx.font = "bold 40px sans-serif";
+        ctx.fillStyle = "white";
+        ctx.textAlign = "center";
+        ctx.fillText(
+          currentCaption.text + " " + currentCaption.emoji,
+          canvas.width / 2,
+          canvas.height - 50
+        );
+
+        // download
+        const link = document.createElement("a");
+        link.download = "flirtframe.png";
+        link.href = canvas.toDataURL("image/png");
+        link.click();
+      }
+    };
   };
 
-  const MoodButton: React.FC<{ mood: Mood }> = ({ mood }) => (
-    <button
-      onClick={() => handleMoodSelect(mood)}
-      className={`
-        px-4 py-2 rounded-full text-sm font-semibold transition-all duration-300 ease-in-out
-        ${selectedMood === mood
-          ? 'bg-rose-600 text-white shadow-lg transform scale-105'
-          : 'bg-gray-100 text-gray-700 hover:bg-gray-200 hover:text-gray-800'
-        }
-        ${mood === 'romantic' && selectedMood !== 'romantic' ? 'hover:bg-rose-100' : ''}
-        ${mood === 'flirty' && selectedMood !== 'flirty' ? 'hover:bg-pink-100' : ''}
-        ${mood === 'mysterious' && selectedMood !== 'mysterious' ? 'hover:bg-purple-100' : ''}
-        ${mood === 'cheeky' && selectedMood !== 'cheeky' ? 'hover:bg-orange-100' : ''}
-        ${mood === 'playful' && selectedMood !== 'playful' ? 'hover:bg-cyan-100' : ''}
-      `}
-    >
-      {mood.charAt(0).toUpperCase() + mood.slice(1)}
-    </button>
-  );
-
-  const currentFilterClasses = moodData[selectedMood]?.filterClasses || '';
-  const currentPaletteColorClass = moodData[selectedMood]?.palette || 'bg-white';
+  const currentFilterClasses = moodData[selectedMood]?.filterClasses || "";
+  const currentPaletteColorClass = moodData[selectedMood]?.palette || "bg-white";
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-rose-50 to-pink-100 flex items-center justify-center p-6">
@@ -137,7 +154,7 @@ const FlirtFrame: React.FC = () => {
             onClick={() => fileInputRef.current?.click()}
             className="px-6 py-3 bg-pink-500 text-white rounded-full text-lg font-bold shadow-md hover:bg-pink-600 transition-colors duration-300"
           >
-            {selectedImage ? 'Change Photo' : 'Upload Photo'}
+            {selectedImage ? "Change Photo" : "Upload Photo"}
           </button>
 
           <div className="relative w-full aspect-square bg-gray-100 rounded-xl overflow-hidden shadow-inner flex items-center justify-center border-2 border-dashed border-gray-300">
@@ -148,11 +165,15 @@ const FlirtFrame: React.FC = () => {
                   alt="Uploaded selfie"
                   className={`w-full h-full object-cover ${currentFilterClasses}`}
                 />
-                <div className={`absolute inset-0 ${currentPaletteColorClass} opacity-20 mix-blend-multiply`}></div>
+                <div
+                  className={`absolute inset-0 ${currentPaletteColorClass} opacity-20 mix-blend-multiply`}
+                ></div>
               </>
             ) : (
               <div className="text-gray-500 text-lg text-center p-4">
-                <span role="img" aria-label="camera" className="text-5xl mb-2 block">📸</span>
+                <span role="img" aria-label="camera" className="text-5xl mb-2 block">
+                  📸
+                </span>
                 Upload your selfie to get started!
               </div>
             )}
@@ -190,6 +211,22 @@ const FlirtFrame: React.FC = () => {
         </button>
       </div>
     </div>
+  );
+};
+
+// Nested MoodButton component
+const MoodButton: React.FC<{ mood: Mood; }> = ({ mood }) => {
+  const { palette } = moodData[mood];
+  return (
+    <button
+      onClick={() => {}}
+      className={`
+        px-4 py-2 rounded-full text-sm font-semibold transition-all duration-300 ease-in-out
+        bg-gray-100 text-gray-700 hover:bg-gray-200 hover:text-gray-800
+      `}
+    >
+      {mood.charAt(0).toUpperCase() + mood.slice(1)}
+    </button>
   );
 };
 
